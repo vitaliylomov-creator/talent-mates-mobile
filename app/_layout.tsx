@@ -82,11 +82,10 @@ export default function RootLayout() {
 
   if (!fontsLoaded || authLoading) return null;
 
-  const tree = (
+  const innerTree = (
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: theme.colors.purple }}>
       <KeyboardProvider>
         <StatusBar style="light" />
-        <AnalyticsBridge />
         <Stack
           screenOptions={{
             headerShown: false,
@@ -103,15 +102,16 @@ export default function RootLayout() {
     </GestureHandlerRootView>
   );
 
-  // PostHog is opt-in — if the key isn't set we render without the provider
-  // and analytics calls become no-ops (see src/lib/analytics.ts).
-  if (!POSTHOG_KEY) return tree;
+  // PostHog is opt-in. usePostHog() throws when called outside a provider, so
+  // AnalyticsBridge has to live INSIDE the conditional branch — not above it.
+  if (!POSTHOG_KEY) return innerTree;
   return (
     <PostHogProvider
       apiKey={POSTHOG_KEY}
       options={{ host: POSTHOG_HOST, captureAppLifecycleEvents: true }}
     >
-      {tree}
+      <AnalyticsBridge />
+      {innerTree}
     </PostHogProvider>
   );
 }

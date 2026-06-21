@@ -20,12 +20,12 @@ export default function Step5Preferences() {
 
   // Pre-fill language from the device locale so the user can just tap Done.
   useEffect(() => {
-    if (!draft.language) {
-      set({ language: lang === 'ua' ? 'uk' : 'en' });
+    if (!draft.language_preference) {
+      set({ language_preference: lang === 'ua' ? 'uk' : 'en' });
     }
   }, []);
 
-  const languages: ReadonlyArray<{ value: NonNullable<Player['language']>; label: string }> = [
+  const languages: ReadonlyArray<{ value: NonNullable<Player['language_preference']>; label: string }> = [
     { value: 'en', label: 'English' },
     { value: 'uk', label: 'Українська' },
     { value: 'ru', label: 'Русский' },
@@ -76,13 +76,13 @@ export default function Step5Preferences() {
         : 'Language — MATE will reply in it. Bio is your context.'}
       onNext={handleDone}
       nextLoading={saving}
-      nextDisabled={!draft.language || saving}
+      nextDisabled={!draft.language_preference || saving}
     >
       <SegmentedPicker
         label={lang === 'ua' ? 'Мова MATE' : 'MATE responds in'}
-        value={draft.language ?? null}
+        value={draft.language_preference ?? null}
         options={languages}
-        onChange={(v) => set({ language: v })}
+        onChange={(v) => set({ language_preference: v })}
       />
       <FormField
         label={lang === 'ua' ? 'Про себе' : 'About you'}

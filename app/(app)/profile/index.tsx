@@ -95,7 +95,7 @@ export default function Profile() {
         { value: 'both',  label: 'Both' },
       ];
 
-  const languages: ReadonlyArray<{ value: NonNullable<Player['language']>; label: string }> = [
+  const languages: ReadonlyArray<{ value: NonNullable<Player['language_preference']>; label: string }> = [
     { value: 'en', label: 'English' },
     { value: 'uk', label: 'Українська' },
     { value: 'ru', label: 'Русский' },
@@ -153,15 +153,15 @@ export default function Profile() {
               value={draft.current_club ?? ''} onChangeText={(v) => set('current_club', v)}
             />
             <FormField label={lang === 'ua' ? 'Ліга' : 'League'}
-              value={draft.league ?? ''} onChangeText={(v) => set('league', v)}
+              value={draft.current_league ?? ''} onChangeText={(v) => set('current_league', v)}
             />
             <SegmentedPicker label={lang === 'ua' ? 'Позиція' : 'Position'}
-              value={draft.position ?? null} options={positions}
-              onChange={(v) => set('position', v)}
+              value={draft.position_primary ?? null} options={positions}
+              onChange={(v) => set('position_primary', v)}
             />
             <SegmentedPicker label={lang === 'ua' ? 'Робоча нога' : 'Preferred foot'}
-              value={draft.preferred_foot ?? null} options={feet}
-              onChange={(v) => set('preferred_foot', v)}
+              value={draft.dominant_foot ?? null} options={feet}
+              onChange={(v) => set('dominant_foot', v)}
             />
           </View>
 
@@ -182,7 +182,7 @@ export default function Profile() {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>{lang === 'ua' ? 'Контракт' : 'Contract'}</Text>
             <FormField label={lang === 'ua' ? 'Кінець' : 'Expiry'}
-              value={draft.contract_expiry ?? ''} onChangeText={(v) => set('contract_expiry', v)}
+              value={draft.contract_expires ?? ''} onChangeText={(v) => set('contract_expires', v)}
               placeholder="2027-06-30" autoCapitalize="none"
             />
             <FormField label={lang === 'ua' ? 'Агент' : 'Agent'}
@@ -193,8 +193,8 @@ export default function Profile() {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>{lang === 'ua' ? 'Налаштування' : 'Preferences'}</Text>
             <SegmentedPicker label={lang === 'ua' ? 'Мова MATE' : 'MATE language'}
-              value={draft.language ?? null} options={languages}
-              onChange={(v) => set('language', v)}
+              value={draft.language_preference ?? null} options={languages}
+              onChange={(v) => set('language_preference', v)}
             />
             <FormField label={lang === 'ua' ? 'Про себе' : 'About you'}
               value={draft.bio ?? ''} onChangeText={(v) => set('bio', v)}

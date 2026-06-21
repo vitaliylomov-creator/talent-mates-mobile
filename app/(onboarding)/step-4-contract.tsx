@@ -20,8 +20,8 @@ export default function Step4Contract() {
     >
       <FormField
         label={lang === 'ua' ? 'Кінець контракту' : 'Contract expiry'}
-        value={draft.contract_expiry ?? ''}
-        onChangeText={(v) => set({ contract_expiry: v })}
+        value={draft.contract_expires ?? ''}
+        onChangeText={(v) => set({ contract_expires: v })}
         placeholder="2027-06-30"
         autoCapitalize="none"
         keyboardType="numbers-and-punctuation"

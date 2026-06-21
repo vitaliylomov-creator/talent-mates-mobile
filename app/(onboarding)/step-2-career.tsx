@@ -51,22 +51,22 @@ export default function Step2Career() {
       />
       <FormField
         label={lang === 'ua' ? 'Ліга' : 'League'}
-        value={draft.league ?? ''}
-        onChangeText={(v) => set({ league: v })}
+        value={draft.current_league ?? ''}
+        onChangeText={(v) => set({ current_league: v })}
         placeholder="U19 National League"
         autoCapitalize="words"
       />
       <SegmentedPicker
         label={lang === 'ua' ? 'Позиція' : 'Position'}
-        value={draft.position ?? null}
+        value={draft.position_primary ?? null}
         options={positions}
-        onChange={(v) => set({ position: v })}
+        onChange={(v) => set({ position_primary: v })}
       />
       <SegmentedPicker
         label={lang === 'ua' ? 'Робоча нога' : 'Preferred foot'}
-        value={draft.preferred_foot ?? null}
+        value={draft.dominant_foot ?? null}
         options={feet}
-        onChange={(v) => set({ preferred_foot: v })}
+        onChange={(v) => set({ dominant_foot: v })}
       />
     </OnboardingScaffold>
   );
