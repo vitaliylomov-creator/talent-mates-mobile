@@ -1,19 +1,17 @@
 import 'react-native-url-polyfill/auto';
-import * as SecureStore from 'expo-secure-store';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient } from '@supabase/supabase-js';
 
 const SUPABASE_URL = 'https://zlkzjeaojpxzccpovygk.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_3E7wboJ9pXRrMxCfDzxxaA_iauXsILn';
 
-const SecureStoreAdapter = {
-  getItem: (key: string) => SecureStore.getItemAsync(key),
-  setItem: (key: string, value: string) => SecureStore.setItemAsync(key, value),
-  removeItem: (key: string) => SecureStore.deleteItemAsync(key),
-};
-
+// AsyncStorage is what Supabase recommends for React Native — works in
+// Expo Go and standalone builds. Tokens are short-lived JWTs that
+// auto-refresh; the marginal benefit of Keychain over AsyncStorage doesn't
+// outweigh the compatibility headache with Expo Go's bundled native modules.
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
-    storage: SecureStoreAdapter,
+    storage: AsyncStorage,
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: false,
