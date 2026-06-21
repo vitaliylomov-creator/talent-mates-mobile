@@ -1,0 +1,78 @@
+{
+  "expo": {
+    "name": "MATE AI",
+    "slug": "mate-ai",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "matemobile",
+    "userInterfaceStyle": "dark",
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.talentmates.mate",
+      "buildNumber": "1",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false,
+        "UIStatusBarStyle": "UIStatusBarStyleLightContent",
+        "NSMicrophoneUsageDescription": "MATE listens when you tap the mic so you can ask without typing.",
+        "NSCameraUsageDescription": "MATE doesn't use the camera yet — reserved for contract PDF capture in a later update."
+      },
+      "associatedDomains": [
+        "applinks:app.talent-mates.com"
+      ]
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/android-icon-foreground.png",
+        "backgroundColor": "#794DC6",
+        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+      },
+      "package": "com.talentmates.mate",
+      "versionCode": 1,
+      "predictiveBackGestureEnabled": false,
+      "permissions": ["RECORD_AUDIO"],
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [{ "scheme": "https", "host": "app.talent-mates.com" }],
+          "category": ["BROWSABLE", "DEFAULT"]
+        },
+        {
+          "action": "VIEW",
+          "data": [{ "scheme": "matemobile" }],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
+      ]
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static",
+      "favicon": "./assets/images/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      "expo-web-browser",
+      "expo-font",
+      "expo-localization",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/images/splash-icon.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#794DC6"
+        }
+      ],
+      [
+        "expo-av",
+        {
+          "microphonePermission": "MATE listens when you tap the mic so you can ask without typing."
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
