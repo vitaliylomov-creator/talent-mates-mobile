@@ -17,6 +17,7 @@ import {
 
 import { theme } from '../src/lib/theme';
 import { useAuth } from '../src/hooks/useAuth';
+import { usePlayer } from '../src/hooks/usePlayer';
 import { useDeepLink } from '../src/hooks/useDeepLink';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -27,6 +28,7 @@ export default function RootLayout() {
   const router = useRouter();
   const segments = useSegments();
   const { session, loading: authLoading } = useAuth();
+  const { player, loading: playerLoading } = usePlayer();
   useDeepLink();
 
   const [fontsLoaded] = useFonts({
@@ -45,14 +47,32 @@ export default function RootLayout() {
 
   useEffect(() => {
     if (authLoading || !fontsLoaded) return;
-    const inAuthGroup = segments[0] === '(auth)';
+    const first = segments[0];
+    const inAuth = first === '(auth)';
+    const inOnboarding = first === '(onboarding)';
+    const inApp = first === '(app)';
 
-    if (!session && !inAuthGroup) {
-      router.replace('/(auth)/sign-in');
-    } else if (session && inAuthGroup) {
+    // Not signed in → must be on auth screens.
+    if (!session) {
+      if (!inAuth) router.replace('/(auth)/sign-in');
+      return;
+    }
+
+    // Signed in but the player row hasn't loaded yet — wait for it before
+    // deciding between onboarding and the main app.
+    if (playerLoading) return;
+
+    // Signed in + no profile → onboarding.
+    if (!player) {
+      if (!inOnboarding) router.replace('/(onboarding)/step-1-personal');
+      return;
+    }
+
+    // Signed in + profile → main app.
+    if (inAuth || inOnboarding) {
       router.replace('/(app)/chat');
     }
-  }, [session, authLoading, fontsLoaded, segments, router]);
+  }, [session, authLoading, player, playerLoading, fontsLoaded, segments, router]);
 
   if (!fontsLoaded || authLoading) return null;
 
@@ -69,6 +89,7 @@ export default function RootLayout() {
         >
           <Stack.Screen name="index" />
           <Stack.Screen name="(auth)" />
+          <Stack.Screen name="(onboarding)" />
           <Stack.Screen name="(app)" />
         </Stack>
       </KeyboardProvider>

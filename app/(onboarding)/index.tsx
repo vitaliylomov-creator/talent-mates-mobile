@@ -1,0 +1,5 @@
+import { Redirect } from 'expo-router';
+
+export default function OnboardingEntry() {
+  return <Redirect href="/(onboarding)/step-1-personal" />;
+}
