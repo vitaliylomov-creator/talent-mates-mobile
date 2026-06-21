@@ -4,9 +4,11 @@ export type ResolvedAgent = Exclude<AgentId, 'auto'>;
 // Column names match the existing production `players` table on Supabase
 // project zlkzjeaojpxzccpovygk. Verified against mate-chat edge function
 // in the Mate repo (player.X field accesses).
+//
+// Note: email is NOT a column on players — it lives on auth.users only.
+// Read it via supabase.auth.getSession().user.email when rendering.
 export interface Player {
   id: string;
-  email: string;
   full_name: string | null;
   date_of_birth: string | null;
   nationality: string | null;

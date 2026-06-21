@@ -9,6 +9,7 @@ import { useRouter } from 'expo-router';
 import { theme } from '../../../src/lib/theme';
 import { t } from '../../../src/constants/strings';
 import { getLang } from '../../../src/lib/lang';
+import { useAuth } from '../../../src/hooks/useAuth';
 import { usePlayer } from '../../../src/hooks/usePlayer';
 import { useSubscription } from '../../../src/hooks/useSubscription';
 import { signOut } from '../../../src/lib/auth';
@@ -23,14 +24,17 @@ import { ProBadge } from '../../../src/components/ProBadge';
 export default function Profile() {
   const router = useRouter();
   const lang = getLang();
+  const { session } = useAuth();
   const { player, loading } = usePlayer();
   const { isPro } = useSubscription();
   const [draft, setDraft] = useState<OnboardingDraft>({});
   const [saving, setSaving] = useState(false);
 
+  const email = session?.user.email ?? '';
+
   useEffect(() => {
     if (player) {
-      const { id: _id, email: _email, created_at: _ca, ...rest } = player;
+      const { id: _id, created_at: _ca, ...rest } = player;
       setDraft(rest);
     }
   }, [player?.id]);
@@ -41,7 +45,7 @@ export default function Profile() {
   const handleSave = async () => {
     if (!player) return;
     setSaving(true);
-    const { error } = await savePlayerProfile(player.id, player.email, draft);
+    const { error } = await savePlayerProfile(player.id, draft);
     setSaving(false);
     if (error) {
       Alert.alert(t('errorGeneric', lang), error.message);
@@ -65,7 +69,7 @@ export default function Profile() {
     );
   };
 
-  const initial = (player?.full_name ?? player?.email ?? '?').trim().charAt(0).toUpperCase();
+  const initial = (player?.full_name ?? email ?? '?').trim().charAt(0).toUpperCase();
   const intOrNull = (v: string): number | null => {
     const n = parseInt(v.replace(/\D/g, ''), 10);
     return Number.isFinite(n) ? n : null;
@@ -113,7 +117,7 @@ export default function Profile() {
               <Text style={styles.name} numberOfLines={1}>{player?.full_name ?? '—'}</Text>
               {isPro && <ProBadge />}
             </View>
-            <Text style={styles.email}>{player?.email ?? ''}</Text>
+            <Text style={styles.email}>{email ?? ''}</Text>
 
             {!isPro && (
               <Pressable

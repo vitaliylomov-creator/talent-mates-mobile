@@ -38,11 +38,7 @@ export default function Step5Preferences() {
     }
     setSaving(true);
     try {
-      const { data, error } = await savePlayerProfile(
-        session.user.id,
-        session.user.email ?? '',
-        draft,
-      );
+      const { data, error } = await savePlayerProfile(session.user.id, draft);
       setSaving(false);
       if (error) {
         // Surface the real PostgREST error verbatim so we can diagnose.
