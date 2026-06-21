@@ -11,6 +11,7 @@ import { t } from '../../../src/constants/strings';
 import { getLang } from '../../../src/lib/lang';
 import { usePlayer } from '../../../src/hooks/usePlayer';
 import { saveTrainingLog, type TrainingLogInput, type SessionType } from '../../../src/lib/training';
+import { track, EVT } from '../../../src/lib/analytics';
 
 import { FormField } from '../../../src/components/FormField';
 import { SegmentedPicker } from '../../../src/components/SegmentedPicker';
@@ -71,6 +72,11 @@ export default function NewTrainingLog() {
       Alert.alert(t('errorGeneric', lang), error.message);
       return;
     }
+    track(EVT.trainingLogged, {
+      session_type: draft.session_type,
+      rpe: draft.intensity ?? null,
+      fatigue: draft.fatigue_level ?? null,
+    });
     router.back();
   };
 

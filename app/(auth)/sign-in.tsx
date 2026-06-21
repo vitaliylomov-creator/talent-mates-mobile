@@ -9,6 +9,7 @@ import { theme } from '../../src/lib/theme';
 import { t } from '../../src/constants/strings';
 import { getLang } from '../../src/lib/lang';
 import { signInWithEmail, signInWithGoogle } from '../../src/lib/auth';
+import { track, EVT } from '../../src/lib/analytics';
 import { BrandMark } from '../../src/components/BrandMark';
 import { FormField } from '../../src/components/FormField';
 import { PillButton } from '../../src/components/PillButton';
@@ -33,16 +34,20 @@ export default function SignIn() {
     setLoading(false);
     if (authErr) {
       setError(humanise(authErr.message, lang));
+      track(EVT.signInFailed, { reason: authErr.message });
       return;
     }
+    track(EVT.signIn, { method: 'email' });
     // Root layout sees the new session via useAuth and redirects.
   };
 
   const handleGoogle = async () => {
     setError(null);
     setGoogleLoading(true);
+    track(EVT.googleStart);
     try {
       await signInWithGoogle();
+      track(EVT.signIn, { method: 'google' });
     } catch (e: any) {
       setError(e?.message ?? t('errorGeneric', lang));
     } finally {

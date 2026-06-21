@@ -3,6 +3,7 @@ import * as Crypto from 'expo-crypto';
 import type { ChatMessage, AgentId } from '../lib/types';
 import { callMateChat } from '../lib/mate-chat';
 import { fetchSessionMessages } from '../lib/conversations';
+import { track, EVT } from '../lib/analytics';
 
 interface State {
   sessionId: string;
@@ -94,12 +95,19 @@ export function useConversation(playerId: string | null) {
         ],
         sending: false,
       }));
+      track(EVT.chatSent, {
+        agent_selected: agent,
+        agent_resolved: res.agent_type,
+        live_data: res.had_real_time_data,
+        chars: text.length,
+      });
     } catch (e: any) {
       setState(prev => ({
         ...prev,
         sending: false,
         error: e?.message ?? 'Unknown error',
       }));
+      track(EVT.chatError, { message: e?.message ?? '' });
     }
   }, [playerId, state.sessionId]);
 

@@ -9,6 +9,7 @@ import { t } from '../../../src/constants/strings';
 import { getLang } from '../../../src/lib/lang';
 import { openUpgradeFlow } from '../../../src/lib/stripe';
 import { PillButton } from '../../../src/components/PillButton';
+import { track, EVT } from '../../../src/lib/analytics';
 
 export default function Upgrade() {
   const router = useRouter();
@@ -16,11 +17,13 @@ export default function Upgrade() {
   const [loading, setLoading] = useState(false);
 
   const handleUpgrade = async () => {
+    track(EVT.proClicked);
     setLoading(true);
     try {
       const result = await openUpgradeFlow();
       setLoading(false);
       if (result === 'success') {
+        track(EVT.proActivated);
         Alert.alert('', t('proActivated', lang), [
           { text: 'OK', onPress: () => router.replace('/(app)/profile') },
         ]);

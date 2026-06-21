@@ -15,10 +15,16 @@ import {
   DMSans_500Medium,
 } from '@expo-google-fonts/dm-sans';
 
+import { PostHogProvider } from 'posthog-react-native';
+
 import { theme } from '../src/lib/theme';
 import { useAuth } from '../src/hooks/useAuth';
 import { usePlayer } from '../src/hooks/usePlayer';
 import { useDeepLink } from '../src/hooks/useDeepLink';
+import { AnalyticsBridge } from '../src/components/AnalyticsBridge';
+
+const POSTHOG_KEY = process.env.EXPO_PUBLIC_POSTHOG_KEY ?? '';
+const POSTHOG_HOST = process.env.EXPO_PUBLIC_POSTHOG_HOST ?? 'https://eu.i.posthog.com';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -76,10 +82,11 @@ export default function RootLayout() {
 
   if (!fontsLoaded || authLoading) return null;
 
-  return (
+  const tree = (
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: theme.colors.purple }}>
       <KeyboardProvider>
         <StatusBar style="light" />
+        <AnalyticsBridge />
         <Stack
           screenOptions={{
             headerShown: false,
@@ -94,5 +101,17 @@ export default function RootLayout() {
         </Stack>
       </KeyboardProvider>
     </GestureHandlerRootView>
+  );
+
+  // PostHog is opt-in — if the key isn't set we render without the provider
+  // and analytics calls become no-ops (see src/lib/analytics.ts).
+  if (!POSTHOG_KEY) return tree;
+  return (
+    <PostHogProvider
+      apiKey={POSTHOG_KEY}
+      options={{ host: POSTHOG_HOST, captureAppLifecycleEvents: true }}
+    >
+      {tree}
+    </PostHogProvider>
   );
 }
