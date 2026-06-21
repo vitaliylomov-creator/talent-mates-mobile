@@ -39,6 +39,10 @@ yarn-error.*
 .idea/
 *.swp
 
+# Supabase CLI internals
+supabase/.temp/
+supabase/.branches/
+
 # typescript
 *.tsbuildinfo
 
