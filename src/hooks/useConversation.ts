@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react';
 import * as Crypto from 'expo-crypto';
 import type { ChatMessage, AgentId } from '../lib/types';
 import { callMateChat } from '../lib/mate-chat';
+import { fetchSessionMessages } from '../lib/conversations';
 
 interface State {
   sessionId: string;
@@ -33,6 +34,17 @@ export function useConversation(playerId: string | null) {
       error: null,
     });
   }, []);
+
+  const loadSession = useCallback(async (sessionId: string) => {
+    if (!playerId) return;
+    setState(prev => ({ ...prev, sessionId, sending: true, error: null }));
+    try {
+      const msgs = await fetchSessionMessages(playerId, sessionId);
+      setState({ sessionId, messages: msgs, sending: false, error: null });
+    } catch (e: any) {
+      setState(prev => ({ ...prev, sending: false, error: e?.message ?? 'Load failed' }));
+    }
+  }, [playerId]);
 
   const append = useCallback((m: Omit<ChatMessage, 'id' | 'createdAt'>) => {
     setState(prev => ({
@@ -99,5 +111,6 @@ export function useConversation(playerId: string | null) {
     send,
     append,
     startNew,
+    loadSession,
   };
 }

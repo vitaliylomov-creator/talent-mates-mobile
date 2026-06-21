@@ -5,7 +5,6 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { theme } from '../../../src/lib/theme';
-import { t } from '../../../src/constants/strings';
 import { getLang } from '../../../src/lib/lang';
 import type { AgentId, ChatMessage } from '../../../src/lib/types';
 import { usePlayer } from '../../../src/hooks/usePlayer';
@@ -18,15 +17,17 @@ import { ChatBubble } from '../../../src/components/ChatBubble';
 import { ChatInput } from '../../../src/components/ChatInput';
 import { LoadingMate } from '../../../src/components/LoadingMate';
 import { EmptyChat } from '../../../src/components/EmptyChat';
+import { ConversationDrawer } from '../../../src/components/ConversationDrawer';
 
 export default function ChatScreen() {
   const lang = getLang();
   const { player } = usePlayer();
   const { isPro } = useSubscription();
-  const { messages, sending, error, send, startNew } = useConversation(player?.id ?? null);
+  const { sessionId, messages, sending, error, send, startNew, loadSession } = useConversation(player?.id ?? null);
 
   const [agent, setAgent] = useState<AgentId>('auto');
   const [draft, setDraft] = useState('');
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const listRef = useRef<FlatList<ChatMessage>>(null);
 
   // Auto-scroll on new messages or while typing animation completes.
@@ -52,7 +53,7 @@ export default function ChatScreen() {
     <SafeAreaView style={styles.safe} edges={['top']}>
       <BrandHeader
         isPro={isPro}
-        onPressHistory={() => { /* D4: open drawer */ }}
+        onPressHistory={() => setDrawerOpen(true)}
         onPressNewChat={startNew}
       />
       <AgentPillRow value={agent} onChange={setAgent} />
@@ -92,6 +93,15 @@ export default function ChatScreen() {
           disabled={sending || !player}
         />
       </KeyboardAvoidingView>
+
+      <ConversationDrawer
+        visible={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        playerId={player?.id ?? null}
+        currentSessionId={sessionId}
+        onPickSession={(id) => { void loadSession(id); }}
+        onNewChat={startNew}
+      />
     </SafeAreaView>
   );
 }
