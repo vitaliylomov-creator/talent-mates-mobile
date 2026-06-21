@@ -75,7 +75,7 @@ export function OnboardingScaffold({
           showsVerticalScrollIndicator={false}
         >
           <Text style={styles.stepLabel}>
-            {lang === 'ua' ? `${step} з ${TOTAL}` : `Step ${step} of ${TOTAL}`}
+            {lang === 'ua' ? `Крок ${step} / ${TOTAL}` : `Step ${step} / ${TOTAL}`}
           </Text>
           <Text style={styles.title}>{title}</Text>
           {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}

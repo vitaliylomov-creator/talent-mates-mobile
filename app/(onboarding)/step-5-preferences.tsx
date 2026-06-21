@@ -32,20 +32,39 @@ export default function Step5Preferences() {
   ];
 
   const handleDone = async () => {
-    if (!session) return;
-    setSaving(true);
-    const { error } = await savePlayerProfile(
-      session.user.id,
-      session.user.email ?? '',
-      draft,
-    );
-    setSaving(false);
-    if (error) {
-      Alert.alert(t('errorGeneric', lang), error.message);
+    if (!session) {
+      Alert.alert('No session', 'You must be signed in.');
       return;
     }
-    reset();
-    router.replace('/(app)/chat');
+    setSaving(true);
+    try {
+      const { data, error } = await savePlayerProfile(
+        session.user.id,
+        session.user.email ?? '',
+        draft,
+      );
+      setSaving(false);
+      if (error) {
+        // Surface the real PostgREST error verbatim so we can diagnose.
+        // Common cause: missing RLS INSERT policy on players table.
+        console.error('[onboarding] savePlayerProfile error:', error);
+        Alert.alert(
+          'Save failed',
+          `${error.message}\n\nCode: ${error.code ?? '—'}\nHint: ${error.hint ?? '—'}`,
+        );
+        return;
+      }
+      if (!data) {
+        Alert.alert('Save failed', 'No row returned after insert.');
+        return;
+      }
+      reset();
+      router.replace('/(app)/chat');
+    } catch (e: any) {
+      setSaving(false);
+      console.error('[onboarding] unexpected error:', e);
+      Alert.alert('Unexpected error', String(e?.message ?? e));
+    }
   };
 
   return (
