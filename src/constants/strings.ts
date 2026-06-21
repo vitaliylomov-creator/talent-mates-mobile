@@ -82,6 +82,11 @@ export const COPY = {
   authNoAccount:      { en: 'No account?',                  ua: 'Немає акаунту?' },
   authHaveAccount:    { en: 'Have an account?',             ua: 'Вже є акаунт?' },
   authForgot:         { en: 'Forgot password?',             ua: 'Забув пароль?' },
+  authOr:             { en: 'or',                           ua: 'або' },
+  authCheckEmail:     { en: 'Check your inbox. We sent a link to finish setup.',
+                        ua: 'Глянь пошту — я скинув лінк для активації.' },
+  authMinChars:       { en: 'At least 6 characters.',       ua: 'Мінімум 6 символів.' },
+  authInvalidEmail:   { en: 'That email looks off.',        ua: 'Email щось не той.' },
 
   // ─── Tabs ────────────────────────────────────────────────────────────
   tabChat:            { en: 'Chat',                         ua: 'Чат' },

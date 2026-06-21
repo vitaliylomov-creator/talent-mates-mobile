@@ -17,6 +17,7 @@ import {
 
 import { theme } from '../src/lib/theme';
 import { useAuth } from '../src/hooks/useAuth';
+import { useDeepLink } from '../src/hooks/useDeepLink';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -26,6 +27,7 @@ export default function RootLayout() {
   const router = useRouter();
   const segments = useSegments();
   const { session, loading: authLoading } = useAuth();
+  useDeepLink();
 
   const [fontsLoaded] = useFonts({
     'DMSerifDisplay-Regular': DMSerifDisplay_400Regular,

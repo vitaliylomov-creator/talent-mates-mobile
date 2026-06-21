@@ -1,114 +1,194 @@
-import { View, Text, Pressable, StyleSheet, Platform } from 'react-native';
+import { useState } from 'react';
+import {
+  View, Text, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, Pressable,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Link, useRouter } from 'expo-router';
+
 import { theme } from '../../src/lib/theme';
 import { t } from '../../src/constants/strings';
+import { getLang } from '../../src/lib/lang';
+import { signInWithEmail, signInWithGoogle } from '../../src/lib/auth';
+import { BrandMark } from '../../src/components/BrandMark';
+import { FormField } from '../../src/components/FormField';
+import { PillButton } from '../../src/components/PillButton';
+import { GoogleButton } from '../../src/components/GoogleButton';
 
-// D1 placeholder: shows the brand splash so we can verify Inside Shell purple,
-// DM Serif Display, italic accent, and pill button geometry render on device.
-// D2 replaces this with the full auth flow (email/password + Google OAuth).
 export default function SignIn() {
+  const router = useRouter();
+  const lang = getLang();
+
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const canSubmit = email.trim().length > 0 && password.length > 0 && !loading;
+
+  const handleSignIn = async () => {
+    setError(null);
+    setLoading(true);
+    const { error: authErr } = await signInWithEmail(email, password);
+    setLoading(false);
+    if (authErr) {
+      setError(humanise(authErr.message, lang));
+      return;
+    }
+    // Root layout sees the new session via useAuth and redirects.
+  };
+
+  const handleGoogle = async () => {
+    setError(null);
+    setGoogleLoading(true);
+    try {
+      await signInWithGoogle();
+    } catch (e: any) {
+      setError(e?.message ?? t('errorGeneric', lang));
+    } finally {
+      setGoogleLoading(false);
+    }
+  };
+
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-      <View style={styles.brand}>
-        <Text style={styles.wordmark}>MATE</Text>
-        <Text style={styles.tagline}>
-          The race engineer{'\n'}<Text style={styles.italic}>for football.</Text>
-        </Text>
-      </View>
-
-      <View style={styles.footer}>
-        <Pressable
-          accessibilityRole="button"
-          style={({ pressed }) => [styles.primary, pressed && styles.pressed]}
-          onPress={() => { /* wired in D2 */ }}
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+      >
+        <ScrollView
+          contentContainerStyle={styles.scroll}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
         >
-          <Text style={styles.primaryLabel}>{t('authSignIn').toUpperCase()}</Text>
-        </Pressable>
+          <View style={styles.brand}>
+            <BrandMark size="md" />
+          </View>
 
-        <Pressable
-          accessibilityRole="button"
-          style={({ pressed }) => [styles.ghost, pressed && styles.pressed]}
-          onPress={() => { /* wired in D2 */ }}
-        >
-          <Text style={styles.ghostLabel}>{t('authSignUp').toUpperCase()}</Text>
-        </Pressable>
+          <View style={styles.form}>
+            <FormField
+              label={t('authEmail', lang)}
+              value={email}
+              onChangeText={setEmail}
+              autoCapitalize="none"
+              autoComplete="email"
+              keyboardType="email-address"
+              textContentType="emailAddress"
+              returnKeyType="next"
+              editable={!loading}
+            />
+            <FormField
+              label={t('authPassword', lang)}
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+              autoCapitalize="none"
+              autoComplete="current-password"
+              textContentType="password"
+              returnKeyType="go"
+              onSubmitEditing={() => canSubmit && handleSignIn()}
+              editable={!loading}
+            />
 
-        <Text style={styles.brandline}>{t('brandLine')}</Text>
-      </View>
+            {error ? <Text style={styles.errorBox}>{error}</Text> : null}
+
+            <PillButton
+              label={t('authSignIn', lang)}
+              onPress={handleSignIn}
+              loading={loading}
+              disabled={!canSubmit}
+              style={{ marginTop: theme.spacing.sm }}
+            />
+
+            <View style={styles.divider}>
+              <View style={styles.dividerLine} />
+              <Text style={styles.dividerText}>{t('authOr', lang)}</Text>
+              <View style={styles.dividerLine} />
+            </View>
+
+            <GoogleButton
+              label={t('authGoogle', lang)}
+              onPress={handleGoogle}
+              loading={googleLoading}
+              disabled={loading}
+            />
+          </View>
+
+          <View style={styles.footer}>
+            <Pressable
+              onPress={() => router.push('/(auth)/sign-up')}
+              accessibilityRole="button"
+            >
+              <Text style={styles.footerText}>
+                {t('authNoAccount', lang)} <Text style={styles.footerAccent}>{t('authSignUp', lang)}</Text>
+              </Text>
+            </Pressable>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
+function humanise(supabaseMsg: string, lang: 'en' | 'ua'): string {
+  const m = supabaseMsg.toLowerCase();
+  if (m.includes('invalid login credentials')) {
+    return lang === 'ua' ? 'Email або пароль не той.' : 'Email or password is off.';
+  }
+  if (m.includes('email not confirmed')) {
+    return t('authCheckEmail', lang);
+  }
+  if (m.includes('network')) return t('errorNetwork', lang);
+  return supabaseMsg;
+}
+
 const styles = StyleSheet.create({
-  safe: {
-    flex: 1,
-    backgroundColor: theme.colors.purple,
-    justifyContent: 'space-between',
+  safe: { flex: 1, backgroundColor: theme.colors.purple },
+  scroll: {
+    flexGrow: 1,
     paddingHorizontal: theme.spacing.xl,
-    paddingTop: theme.spacing.xxl * 2,
-    paddingBottom: theme.spacing.xl,
+    paddingVertical: theme.spacing.xl,
   },
-  brand: {
+  brand: { alignItems: 'center', marginTop: theme.spacing.xxl, marginBottom: theme.spacing.xxl },
+  form: { gap: 0 },
+  errorBox: {
+    fontFamily: theme.fonts.body,
+    fontSize: 13,
+    color: theme.colors.danger,
+    backgroundColor: 'rgba(255,93,108,0.10)',
+    borderColor: theme.colors.danger,
+    borderWidth: 0.5,
+    borderRadius: theme.radii.md,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: 12,
+    marginBottom: theme.spacing.sm,
+  },
+  divider: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginTop: theme.spacing.xxl,
+    gap: 12,
+    marginVertical: theme.spacing.lg,
   },
-  wordmark: {
-    fontFamily: theme.fonts.display,
-    fontSize: Platform.select({ ios: 96, android: 88 }),
-    color: theme.colors.t1,
-    letterSpacing: -2,
-    lineHeight: Platform.select({ ios: 104, android: 96 }),
-  },
-  tagline: {
-    fontFamily: theme.fonts.display,
-    fontSize: 22,
-    color: theme.colors.t2,
-    textAlign: 'center',
-    marginTop: theme.spacing.md,
-    lineHeight: 30,
-  },
-  italic: {
-    fontFamily: theme.fonts.displayItalic,
-    color: theme.colors.t3,
+  dividerLine: { flex: 1, height: 0.5, backgroundColor: theme.colors.border },
+  dividerText: {
+    fontFamily: theme.fonts.body,
+    fontSize: 11,
+    letterSpacing: 1.5,
+    color: theme.colors.t4,
+    textTransform: 'uppercase',
   },
   footer: {
-    gap: theme.spacing.sm,
-  },
-  primary: {
-    height: 56,
-    backgroundColor: theme.colors.white,
-    borderRadius: theme.radii.pill,
     alignItems: 'center',
-    justifyContent: 'center',
+    marginTop: theme.spacing.xl,
   },
-  primaryLabel: {
-    fontFamily: theme.fonts.bodyMedium,
-    fontSize: 13,
-    letterSpacing: 2.5,
-    color: theme.colors.purple,
-  },
-  ghost: {
-    height: 56,
-    backgroundColor: theme.colors.glass,
-    borderColor: theme.colors.borderMid,
-    borderWidth: 0.5,
-    borderRadius: theme.radii.pill,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  ghostLabel: {
-    fontFamily: theme.fonts.bodyMedium,
-    fontSize: 13,
-    letterSpacing: 2.5,
-    color: theme.colors.t1,
-  },
-  pressed: { opacity: 0.85, transform: [{ scale: 0.99 }] },
-  brandline: {
+  footerText: {
     fontFamily: theme.fonts.body,
-    fontSize: 12,
-    color: theme.colors.t4,
-    textAlign: 'center',
-    marginTop: theme.spacing.lg,
-    letterSpacing: 0.3,
+    fontSize: 14,
+    color: theme.colors.t3,
+  },
+  footerAccent: {
+    fontFamily: theme.fonts.bodyMedium,
+    color: theme.colors.t1,
   },
 });
