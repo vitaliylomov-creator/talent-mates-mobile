@@ -10,6 +10,8 @@ import { t } from '../../src/constants/strings';
 import { getLang } from '../../src/lib/lang';
 import { signInWithEmail, signInWithGoogle } from '../../src/lib/auth';
 import { track, EVT } from '../../src/lib/analytics';
+import { useIntent } from '../../src/hooks/useIntent';
+import type { Href } from 'expo-router';
 import { BrandMark } from '../../src/components/BrandMark';
 import { FormField } from '../../src/components/FormField';
 import { PillButton } from '../../src/components/PillButton';
@@ -18,6 +20,7 @@ import { GoogleButton } from '../../src/components/GoogleButton';
 export default function SignIn() {
   const router = useRouter();
   const lang = getLang();
+  const { intent } = useIntent();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -122,7 +125,12 @@ export default function SignIn() {
 
           <View style={styles.footer}>
             <Pressable
-              onPress={() => router.push('/(auth)/sign-up')}
+              onPress={() => {
+                const dest: Href = intent === 'agent'
+                  ? ('/(auth)/agent-sign-up-step-1' as Href)
+                  : '/(auth)/sign-up';
+                router.push(dest);
+              }}
               accessibilityRole="button"
             >
               <Text style={styles.footerText}>

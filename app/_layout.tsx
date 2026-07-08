@@ -21,6 +21,7 @@ import { theme } from '../src/lib/theme';
 import { useAuth } from '../src/hooks/useAuth';
 import { usePlayer } from '../src/hooks/usePlayer';
 import { useAgent } from '../src/hooks/useAgent';
+import { useIntent } from '../src/hooks/useIntent';
 import { useDeepLink } from '../src/hooks/useDeepLink';
 import { AnalyticsBridge } from '../src/components/AnalyticsBridge';
 
@@ -37,6 +38,7 @@ export default function RootLayout() {
   const { session, loading: authLoading } = useAuth();
   const { player, loading: playerLoading } = usePlayer();
   const { agent, loading: agentLoading } = useAgent();
+  const { intent, loading: intentLoading } = useIntent();
   useDeepLink();
 
   const [fontsLoaded] = useFonts({
@@ -70,8 +72,8 @@ export default function RootLayout() {
       return;
     }
 
-    // Signed in — wait for both product-row lookups to resolve.
-    if (playerLoading || agentLoading) return;
+    // Signed in — wait for all lookups to resolve.
+    if (playerLoading || agentLoading || intentLoading) return;
 
     // Signed in + agent row → MATE Pro tabs.
     if (agent) {
@@ -85,17 +87,28 @@ export default function RootLayout() {
       return;
     }
 
-    // Signed in, no product row yet — user is mid-flow. Route based on
-    // stored intent from the role picker. Default falls back to Player
-    // onboarding (existing behaviour before Sprint 2).
-    // NOTE: intent-based routing to agent-sign-up-step-2 lands in Sprint 2
-    // Day 2 alongside the agent registration screens.
-    if (!inOnboarding && !inAuth) {
+    // Signed in, no product row yet — user is mid-flow. Route by intent.
+    // Agent path: only touch this while user is still in the auth stack;
+    // step-2 lives inside (auth) itself so we don't want to bounce it out.
+    if (intent === 'agent') {
+      // If they're already on step-2 or step-1, leave them alone.
+      const currentSegment = segments[1] as string | undefined;
+      const onAgentSignUp =
+        currentSegment === 'agent-sign-up-step-1' ||
+        currentSegment === 'agent-sign-up-step-2';
+      if (!onAgentSignUp) {
+        router.replace('/(auth)/agent-sign-up-step-2' as Href);
+      }
+      return;
+    }
+
+    // Player path (default): existing 5-step onboarding.
+    if (!inOnboarding) {
       router.replace('/(onboarding)/step-1-personal');
     }
   }, [
     session, authLoading, player, playerLoading, agent, agentLoading,
-    fontsLoaded, segments, router,
+    intent, intentLoading, fontsLoaded, segments, router,
   ]);
 
   if (!fontsLoaded || authLoading) return null;
