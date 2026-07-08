@@ -231,3 +231,99 @@ export async function fetchAgentSubscription(agentId: string): Promise<AgentSubs
   }
   return (data as AgentSubscription | null) ?? null;
 }
+
+// ─── Editable agent fields (post-registration) ──────────────────────────
+// FFAR licence/country stay read-only — those are verified externally and
+// changing them mid-subscription needs an admin action anyway.
+export type AgentEditable = Partial<Pick<Agent,
+  | 'first_name' | 'last_name'
+  | 'agency_name' | 'country_of_operation'
+  | 'years_experience' | 'specialisation'
+>>;
+
+export async function updateAgent(agentId: string, patch: AgentEditable) {
+  const cleaned: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(patch)) {
+    // Empty strings → null so the DB clears the field cleanly.
+    cleaned[k] = v === '' ? null : v;
+  }
+  return supabase
+    .from('mate_pro_agents')
+    .update(cleaned)
+    .eq('id', agentId)
+    .select()
+    .single();
+}
+
+// ─── Subscription lifecycle via edge functions ──────────────────────────
+export interface CreateCheckoutResponse {
+  url: string;
+  session_id: string;
+  plan: SubscriptionPlan;
+  price_eur: 149 | 299;
+  trial_days: number;
+}
+
+export async function createCheckout(): Promise<CreateCheckoutResponse> {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) throw new Error('Not authenticated');
+
+  const res = await fetch(`${SUPABASE.URL}/functions/v1/mate-pro-create-checkout`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${session.access_token}`,
+      'apikey': SUPABASE.ANON_KEY,
+    },
+    body: JSON.stringify({}),
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`create-checkout ${res.status}: ${text}`);
+  }
+  return res.json();
+}
+
+export async function cancelSubscription(): Promise<{ ok: true; cancel_at: string }> {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) throw new Error('Not authenticated');
+
+  const res = await fetch(`${SUPABASE.URL}/functions/v1/mate-pro-cancel-subscription`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${session.access_token}`,
+      'apikey': SUPABASE.ANON_KEY,
+    },
+    body: JSON.stringify({}),
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`cancel-subscription ${res.status}: ${text}`);
+  }
+  return res.json();
+}
+
+/**
+ * Full GDPR erasure. Wipes storage frames + all mate_pro_* rows (via auth.users
+ * cascade) + auth.users row itself. Founding slot stays consumed.
+ * Client MUST sign out after this call — the session's user is gone.
+ */
+export async function deleteAgentAccount(): Promise<void> {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) throw new Error('Not authenticated');
+
+  const res = await fetch(`${SUPABASE.URL}/functions/v1/mate-pro-delete-account`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${session.access_token}`,
+      'apikey': SUPABASE.ANON_KEY,
+    },
+    body: JSON.stringify({}),
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`delete-account ${res.status}: ${text}`);
+  }
+}
