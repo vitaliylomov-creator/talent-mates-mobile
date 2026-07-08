@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import {
-  View, Text, StyleSheet, FlatList, KeyboardAvoidingView, Platform,
+  View, Text, StyleSheet, FlatList, KeyboardAvoidingView, Platform, Pressable,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useLocalSearchParams } from 'expo-router';
+import { Feather } from '@expo/vector-icons';
 
 import { theme } from '../../../src/lib/theme';
 import { getLang } from '../../../src/lib/lang';
@@ -33,14 +35,28 @@ const SUB_AGENT_LABEL: Record<Exclude<ProSubAgent, 'auto'>, string> = {
 
 export default function ProChat() {
   const lang = getLang();
+  const params = useLocalSearchParams<{ client_id?: string; client_name?: string }>();
   const { agent } = useAgent();
   const {
-    messages, sending, error, send, startNew,
-  } = useProConversation();
+    messages, sending, error, send, startNew, setClient, clientId,
+  } = useProConversation({ initialClientId: params.client_id ?? null });
 
   const [subAgent, setSubAgent] = useState<ProSubAgent>('auto');
   const [draft, setDraft] = useState('');
   const listRef = useRef<FlatList<ProMessage>>(null);
+
+  // If the deep-link params change after mount (e.g. tapping "Ask MATE about
+  // another client" while already on chat), reflect that in state.
+  useEffect(() => {
+    if (params.client_id && params.client_id !== clientId) {
+      setClient(params.client_id);
+    }
+  }, [params.client_id, clientId, setClient]);
+
+  const handleClearClient = () => {
+    setClient(null);
+    startNew();
+  };
 
   useEffect(() => {
     if (messages.length === 0) return;
@@ -70,6 +86,16 @@ export default function ProChat() {
         onPressHistory={() => { /* D4 opens drawer */ }}
         onPressNewChat={startNew}
       />
+      {clientId && params.client_name ? (
+        <View style={styles.clientChip}>
+          <Feather name="user" size={13} color={theme.colors.accentGreen} />
+          <Text style={styles.clientChipText}>About {params.client_name}</Text>
+          <Pressable onPress={handleClearClient} hitSlop={8}
+            accessibilityLabel="Unscope conversation">
+            <Feather name="x" size={14} color={theme.colors.t2} />
+          </Pressable>
+        </View>
+      ) : null}
       <AgentPillRow value={subAgent as AgentId} onChange={handleSwitchAgent} />
 
       <KeyboardAvoidingView
@@ -169,6 +195,26 @@ const styles = StyleSheet.create({
     color: theme.colors.danger,
     paddingHorizontal: theme.spacing.md,
     paddingBottom: 6,
+  },
+  clientChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 6,
+    marginHorizontal: theme.spacing.md,
+    marginTop: theme.spacing.sm,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: theme.radii.pill,
+    backgroundColor: theme.colors.glassHover,
+    borderColor: theme.colors.border,
+    borderWidth: 0.5,
+  },
+  clientChipText: {
+    fontFamily: theme.fonts.bodyMedium,
+    fontSize: 12,
+    color: theme.colors.t1,
+    letterSpacing: 0.3,
   },
   emptyWrap: {
     flex: 1,
