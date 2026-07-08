@@ -29,6 +29,7 @@
     "expo-splash-screen": "~56.0.10",
     "expo-status-bar": "~56.0.4",
     "expo-symbols": "~56.0.6",
+    "expo-video-thumbnails": "~56.0.3",
     "expo-web-browser": "~56.0.5",
     "posthog-react-native": "^4.50.0",
     "react": "19.2.3",

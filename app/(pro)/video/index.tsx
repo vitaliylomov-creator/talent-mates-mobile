@@ -5,6 +5,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import * as VideoThumbnails from 'expo-video-thumbnails';
 import * as Haptics from 'expo-haptics';
 import Markdown from 'react-native-markdown-display';
 
@@ -19,11 +20,21 @@ import { SegmentedPicker } from '../../../src/components/SegmentedPicker';
 import { FormField } from '../../../src/components/FormField';
 import { LoadingMate } from '../../../src/components/LoadingMate';
 
-// Simplest MVP: fresh flow every time you open the tab. History surface
-// (past mate_pro_video_analyses rows) comes in Sprint 3.
+// Path A: agent picks a raw video from their library, we extract N frames
+// client-side via expo-video-thumbnails at evenly-spaced timestamps. Falls
+// through to the same upload → mate-pro-video-analyse pipeline that the
+// photo-still path uses. Photos-only remains as a secondary option for
+// agents who already have the moments extracted.
+type PickedFrame = {
+  uri: string;
+  mimeType?: string | null;
+  fileName?: string | null;
+};
+
 type Phase =
   | { kind: 'idle' }
-  | { kind: 'previewing'; frames: ImagePicker.ImagePickerAsset[] }
+  | { kind: 'extracting'; target: number }
+  | { kind: 'previewing'; frames: PickedFrame[]; source: 'video' | 'photos' }
   | { kind: 'uploading'; total: number; done: number }
   | { kind: 'analysing' }
   | { kind: 'complete'; result: string; framesUsed: number }
@@ -36,10 +47,22 @@ const FOCUSES: ReadonlyArray<{ value: VideoFocus; label: string }> = [
   { value: 'physical',    label: 'Physical' },
 ];
 
-// mate-pro-video-analyse enforces >=4 server-side — align the client min
-// so the alert catches the case before we spend upload bandwidth.
+const FRAMES_FROM_VIDEO = 8;
 const MIN_FRAMES = 4;
 const MAX_FRAMES = 12;
+
+/**
+ * Even-spaced timestamps across the clip, with a small margin at start/end
+ * so we don't grab pitch-black transition frames from a compilation reel.
+ */
+function planFrameTimestamps(durationMs: number, count: number): number[] {
+  const margin = Math.min(500, durationMs * 0.03);
+  const start = margin;
+  const end = Math.max(margin + 1, durationMs - margin);
+  if (count === 1) return [Math.floor((start + end) / 2)];
+  const step = (end - start) / (count - 1);
+  return Array.from({ length: count }, (_, i) => Math.floor(start + i * step));
+}
 
 export default function VideoAnalyse() {
   const { agent } = useAgent();
@@ -47,16 +70,60 @@ export default function VideoAnalyse() {
   const [question, setQuestion] = useState('');
   const [phase, setPhase] = useState<Phase>({ kind: 'idle' });
 
-  const busy = phase.kind === 'uploading' || phase.kind === 'analysing';
+  const busy = phase.kind === 'uploading' || phase.kind === 'analysing' || phase.kind === 'extracting';
 
-  const handlePick = async () => {
+  const handlePickVideo = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (perm.status !== 'granted') {
+      Alert.alert('Photo access needed', 'Open Settings to let MATE Pro read from your library.');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: 'videos',
+      allowsMultipleSelection: false,
+      quality: 1,
+    });
+    if (result.canceled || result.assets.length === 0) return;
+
+    const video = result.assets[0];
+    const durationMs = video.duration ?? 0;
+    if (!durationMs || durationMs < 2000) {
       Alert.alert(
-        'Photo access needed',
-        'Open Settings to let MATE Pro read frames from your library.',
+        'Clip too short',
+        'Pick a video that runs at least 2 seconds so the vision agent has enough to work with.',
       );
+      return;
+    }
+
+    setPhase({ kind: 'extracting', target: FRAMES_FROM_VIDEO });
+
+    try {
+      const timestamps = planFrameTimestamps(durationMs, FRAMES_FROM_VIDEO);
+      const thumbs = [];
+      for (const time of timestamps) {
+        const t = await VideoThumbnails.getThumbnailAsync(video.uri, {
+          time,
+          quality: 0.85,
+        });
+        thumbs.push({
+          uri: t.uri,
+          mimeType: 'image/jpeg',
+          fileName: `frame-${thumbs.length + 1}.jpg`,
+        });
+      }
+      setPhase({ kind: 'previewing', frames: thumbs, source: 'video' });
+    } catch (e: any) {
+      setPhase({ kind: 'error', message: `Frame extraction failed: ${e?.message ?? String(e)}` });
+    }
+  };
+
+  const handlePickPhotos = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (perm.status !== 'granted') {
+      Alert.alert('Photo access needed', 'Open Settings to let MATE Pro read from your library.');
       return;
     }
 
@@ -64,18 +131,24 @@ export default function VideoAnalyse() {
       mediaTypes: 'images',
       allowsMultipleSelection: true,
       selectionLimit: MAX_FRAMES,
-      quality: 0.8,
+      quality: 0.85,
     });
     if (result.canceled || result.assets.length === 0) return;
 
     if (result.assets.length < MIN_FRAMES) {
-      Alert.alert(
-        'Too few frames',
-        `Pick at least ${MIN_FRAMES} stills so the vision agent has enough to reason from.`,
-      );
+      Alert.alert('Too few frames', `Pick at least ${MIN_FRAMES} stills.`);
       return;
     }
-    setPhase({ kind: 'previewing', frames: result.assets });
+
+    setPhase({
+      kind: 'previewing',
+      source: 'photos',
+      frames: result.assets.map((a) => ({
+        uri: a.uri,
+        mimeType: a.mimeType,
+        fileName: a.fileName,
+      })),
+    });
   };
 
   const handleReset = () => {
@@ -94,12 +167,7 @@ export default function VideoAnalyse() {
     let paths: string[] = [];
     try {
       for (let i = 0; i < frames.length; i++) {
-        const asset = frames[i];
-        const path = await uploadFrame(agent.id, vaId, i + 1, {
-          uri: asset.uri,
-          mimeType: asset.mimeType,
-          fileName: asset.fileName,
-        });
+        const path = await uploadFrame(agent.id, vaId, i + 1, frames[i]);
         paths.push(path);
         setPhase({ kind: 'uploading', total: frames.length, done: i + 1 });
       }
@@ -135,7 +203,7 @@ export default function VideoAnalyse() {
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.header}>
         <Text style={styles.title}>Video read</Text>
-        {phase.kind === 'complete' || phase.kind === 'error' ? (
+        {phase.kind === 'complete' || phase.kind === 'error' || phase.kind === 'previewing' ? (
           <Pressable onPress={handleReset}
             style={({ pressed }) => [styles.resetBtn, pressed && { opacity: 0.85 }]}>
             <Feather name="refresh-ccw" size={14} color={theme.colors.purple} />
@@ -169,27 +237,33 @@ export default function VideoAnalyse() {
             />
 
             {phase.kind === 'idle' ? (
-              <>
-                <View style={styles.dropZone}>
-                  <Feather name="image" size={28} color={theme.colors.t2} />
-                  <Text style={styles.dropTitle}>
-                    Pick {MIN_FRAMES}–{MAX_FRAMES} stills from your library
+              <View style={styles.dropZone}>
+                <Feather name="video" size={32} color={theme.colors.t2} />
+                <Text style={styles.dropTitle}>
+                  Pick a video from your library
+                </Text>
+                <Text style={styles.dropBody}>
+                  The full clip your scout sent — MATE Pro pulls {FRAMES_FROM_VIDEO} evenly-spaced
+                  stills and reads them.
+                </Text>
+                <PillButton
+                  label="Pick video"
+                  onPress={handlePickVideo}
+                  disabled={!agent}
+                  style={{ marginTop: theme.spacing.md }}
+                />
+                <Pressable onPress={handlePickPhotos} disabled={!agent}
+                  style={({ pressed }) => [styles.altLink, pressed && { opacity: 0.7 }]}>
+                  <Text style={styles.altLinkText}>
+                    Or pick {MIN_FRAMES}–{MAX_FRAMES} stills yourself
                   </Text>
-                  <Text style={styles.dropBody}>
-                    Screenshots from a clip, spaced across the moment you want the agent to read.
-                  </Text>
-                  <PillButton
-                    label="Pick from photos"
-                    onPress={handlePick}
-                    disabled={!agent}
-                    style={{ marginTop: theme.spacing.md }}
-                  />
-                </View>
-              </>
+                </Pressable>
+              </View>
             ) : (
               <>
                 <Text style={styles.sectionLabel}>
-                  {phase.frames.length} FRAME{phase.frames.length === 1 ? '' : 'S'} READY
+                  {phase.frames.length} FRAME{phase.frames.length === 1 ? '' : 'S'}
+                  {phase.source === 'video' ? ' PULLED FROM VIDEO' : ' PICKED'}
                 </Text>
                 <ScrollView
                   horizontal
@@ -206,7 +280,8 @@ export default function VideoAnalyse() {
                   ))}
                 </ScrollView>
                 <View style={styles.actionRow}>
-                  <Pressable onPress={handlePick}
+                  <Pressable
+                    onPress={phase.source === 'video' ? handlePickVideo : handlePickPhotos}
                     style={({ pressed }) => [styles.secondaryBtn, pressed && { opacity: 0.85 }]}>
                     <Feather name="refresh-cw" size={14} color={theme.colors.t1} />
                     <Text style={styles.secondaryLabel}>Reselect</Text>
@@ -220,6 +295,18 @@ export default function VideoAnalyse() {
               </>
             )}
           </>
+        ) : null}
+
+        {phase.kind === 'extracting' ? (
+          <View style={styles.busy}>
+            <Text style={styles.busyTitle}>Reading your clip…</Text>
+            <Text style={styles.busyBody}>
+              Pulling {phase.target} evenly-spaced frames.
+            </Text>
+            <View style={{ marginTop: theme.spacing.lg, alignSelf: 'center' }}>
+              <LoadingMate />
+            </View>
+          </View>
         ) : null}
 
         {phase.kind === 'uploading' ? (
@@ -331,7 +418,21 @@ const styles = StyleSheet.create({
     marginTop: 6,
     textAlign: 'center',
     lineHeight: 20,
-    maxWidth: 320,
+    maxWidth: 340,
+  },
+  altLink: {
+    marginTop: theme.spacing.md,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+  },
+  altLinkText: {
+    fontFamily: theme.fonts.bodyMedium,
+    fontSize: 12,
+    color: theme.colors.t3,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+    textDecorationLine: 'underline',
+    textDecorationColor: theme.colors.t4,
   },
   sectionLabel: {
     fontFamily: theme.fonts.bodyMedium,
