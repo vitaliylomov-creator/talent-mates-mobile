@@ -4,10 +4,10 @@ import { Platform } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { theme } from '../../src/lib/theme';
 import { t } from '../../src/constants/strings';
-import { getLang } from '../../src/lib/lang';
+import { usePlayerLang } from '../../src/hooks/usePlayerLang';
 
 export default function AppLayout() {
-  const lang = getLang();
+  const lang = usePlayerLang();
   return (
     <Tabs
       screenOptions={{

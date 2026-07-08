@@ -8,7 +8,7 @@ import { useRouter } from 'expo-router';
 
 import { theme } from '../../../src/lib/theme';
 import { t } from '../../../src/constants/strings';
-import { getLang } from '../../../src/lib/lang';
+import { usePlayerLang } from '../../../src/hooks/usePlayerLang';
 import { useAuth } from '../../../src/hooks/useAuth';
 import { usePlayer } from '../../../src/hooks/usePlayer';
 import { useSubscription } from '../../../src/hooks/useSubscription';
@@ -23,7 +23,7 @@ import { ProBadge } from '../../../src/components/ProBadge';
 
 export default function Profile() {
   const router = useRouter();
-  const lang = getLang();
+  const lang = usePlayerLang();
   const { session } = useAuth();
   const { player, loading } = usePlayer();
   const { isPro } = useSubscription();

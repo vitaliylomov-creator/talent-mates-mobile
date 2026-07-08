@@ -8,7 +8,7 @@ import { useRouter } from 'expo-router';
 
 import { theme } from '../../../src/lib/theme';
 import { t } from '../../../src/constants/strings';
-import { getLang } from '../../../src/lib/lang';
+import { usePlayerLang } from '../../../src/hooks/usePlayerLang';
 import { usePlayer } from '../../../src/hooks/usePlayer';
 import { saveTrainingLog, type TrainingLogInput, type SessionType } from '../../../src/lib/training';
 import { track, EVT } from '../../../src/lib/analytics';
@@ -24,7 +24,7 @@ function todayISO(): string {
 
 export default function NewTrainingLog() {
   const router = useRouter();
-  const lang = getLang();
+  const lang = usePlayerLang();
   const { player } = usePlayer();
 
   const [draft, setDraft] = useState<TrainingLogInput>({

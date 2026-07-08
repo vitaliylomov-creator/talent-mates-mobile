@@ -9,7 +9,7 @@ import * as Haptics from 'expo-haptics';
 
 import { theme } from '../../../src/lib/theme';
 import { t } from '../../../src/constants/strings';
-import { getLang } from '../../../src/lib/lang';
+import { usePlayerLang } from '../../../src/hooks/usePlayerLang';
 import { relativeTime } from '../../../src/lib/time';
 import { usePlayer } from '../../../src/hooks/usePlayer';
 import { useTrainingLogs } from '../../../src/hooks/useTrainingLogs';
@@ -26,7 +26,7 @@ const TYPE_LABEL: Record<string, { en: string; ua: string }> = {
 
 export default function TrainingHistory() {
   const router = useRouter();
-  const lang = getLang();
+  const lang = usePlayerLang();
   const { player } = usePlayer();
   const { items, loading, reload } = useTrainingLogs(player?.id ?? null);
 

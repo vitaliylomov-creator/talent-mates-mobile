@@ -5,7 +5,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { theme } from '../../../src/lib/theme';
-import { getLang } from '../../../src/lib/lang';
+import { usePlayerLang } from '../../../src/hooks/usePlayerLang';
+import { t } from '../../../src/constants/strings';
 import type { AgentId, ChatMessage } from '../../../src/lib/types';
 import { usePlayer } from '../../../src/hooks/usePlayer';
 import { useSubscription } from '../../../src/hooks/useSubscription';
@@ -20,7 +21,7 @@ import { EmptyChat } from '../../../src/components/EmptyChat';
 import { ConversationDrawer } from '../../../src/components/ConversationDrawer';
 
 export default function ChatScreen() {
-  const lang = getLang();
+  const lang = usePlayerLang();
   const { player } = usePlayer();
   const { isPro } = useSubscription();
   const { sessionId, messages, sending, error, send, startNew, loadSession } = useConversation(player?.id ?? null);
@@ -91,6 +92,7 @@ export default function ChatScreen() {
           onChangeText={setDraft}
           onSend={handleSend}
           disabled={sending || !player}
+          placeholder={t('chatPlaceholder', lang)}
         />
       </KeyboardAvoidingView>
 

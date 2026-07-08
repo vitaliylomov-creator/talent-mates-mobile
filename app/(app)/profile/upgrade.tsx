@@ -6,14 +6,14 @@ import { useRouter } from 'expo-router';
 
 import { theme } from '../../../src/lib/theme';
 import { t } from '../../../src/constants/strings';
-import { getLang } from '../../../src/lib/lang';
+import { usePlayerLang } from '../../../src/hooks/usePlayerLang';
 import { openUpgradeFlow } from '../../../src/lib/stripe';
 import { PillButton } from '../../../src/components/PillButton';
 import { track, EVT } from '../../../src/lib/analytics';
 
 export default function Upgrade() {
   const router = useRouter();
-  const lang = getLang();
+  const lang = usePlayerLang();
   const [loading, setLoading] = useState(false);
 
   const handleUpgrade = async () => {
