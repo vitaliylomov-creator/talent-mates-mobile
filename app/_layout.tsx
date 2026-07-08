@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Stack, useRouter, useSegments } from 'expo-router';
+import { Stack, useRouter, useSegments, type Href } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -20,6 +20,7 @@ import { PostHogProvider } from 'posthog-react-native';
 import { theme } from '../src/lib/theme';
 import { useAuth } from '../src/hooks/useAuth';
 import { usePlayer } from '../src/hooks/usePlayer';
+import { useAgent } from '../src/hooks/useAgent';
 import { useDeepLink } from '../src/hooks/useDeepLink';
 import { AnalyticsBridge } from '../src/components/AnalyticsBridge';
 
@@ -35,6 +36,7 @@ export default function RootLayout() {
   const segments = useSegments();
   const { session, loading: authLoading } = useAuth();
   const { player, loading: playerLoading } = usePlayer();
+  const { agent, loading: agentLoading } = useAgent();
   useDeepLink();
 
   const [fontsLoaded] = useFonts({
@@ -51,34 +53,50 @@ export default function RootLayout() {
     }
   }, [fontsLoaded, authLoading]);
 
+  // Three-way auth gate — see MATE_PRO_MOBILE_BRIEFING.md §5, §6.
+  // Order matters: agent wins over player when both rows somehow exist
+  // (shouldn't happen; defensive default).
   useEffect(() => {
     if (authLoading || !fontsLoaded) return;
     const first = segments[0];
     const inAuth = first === '(auth)';
     const inOnboarding = first === '(onboarding)';
     const inApp = first === '(app)';
+    const inPro = (first as string) === '(pro)';
 
-    // Not signed in → must be on auth screens.
+    // Not signed in → auth stack (role picker is the entry).
     if (!session) {
-      if (!inAuth) router.replace('/(auth)/sign-in');
+      if (!inAuth) router.replace('/(auth)/role' as Href);
       return;
     }
 
-    // Signed in but the player row hasn't loaded yet — wait for it before
-    // deciding between onboarding and the main app.
-    if (playerLoading) return;
+    // Signed in — wait for both product-row lookups to resolve.
+    if (playerLoading || agentLoading) return;
 
-    // Signed in + no profile → onboarding.
-    if (!player) {
-      if (!inOnboarding) router.replace('/(onboarding)/step-1-personal');
+    // Signed in + agent row → MATE Pro tabs.
+    if (agent) {
+      if (!inPro) router.replace('/(pro)/chat' as Href);
       return;
     }
 
-    // Signed in + profile → main app.
-    if (inAuth || inOnboarding) {
-      router.replace('/(app)/chat');
+    // Signed in + player row → existing Player app.
+    if (player) {
+      if (!inApp) router.replace('/(app)/chat');
+      return;
     }
-  }, [session, authLoading, player, playerLoading, fontsLoaded, segments, router]);
+
+    // Signed in, no product row yet — user is mid-flow. Route based on
+    // stored intent from the role picker. Default falls back to Player
+    // onboarding (existing behaviour before Sprint 2).
+    // NOTE: intent-based routing to agent-sign-up-step-2 lands in Sprint 2
+    // Day 2 alongside the agent registration screens.
+    if (!inOnboarding && !inAuth) {
+      router.replace('/(onboarding)/step-1-personal');
+    }
+  }, [
+    session, authLoading, player, playerLoading, agent, agentLoading,
+    fontsLoaded, segments, router,
+  ]);
 
   if (!fontsLoaded || authLoading) return null;
 
@@ -97,13 +115,12 @@ export default function RootLayout() {
           <Stack.Screen name="(auth)" />
           <Stack.Screen name="(onboarding)" />
           <Stack.Screen name="(app)" />
+          <Stack.Screen name="(pro)" />
         </Stack>
       </KeyboardProvider>
     </GestureHandlerRootView>
   );
 
-  // PostHog is opt-in. usePostHog() throws when called outside a provider, so
-  // AnalyticsBridge has to live INSIDE the conditional branch — not above it.
   if (!POSTHOG_KEY) return innerTree;
   return (
     <PostHogProvider
