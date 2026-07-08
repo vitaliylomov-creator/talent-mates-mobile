@@ -87,6 +87,12 @@
           "microphonePermission": "MATE listens when you tap the mic so you can ask without typing."
         }
       ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "MATE Pro reads frames you pick from your photo library so the vision agent can watch them."
+        }
+      ],
       "expo-asset"
     ],
     "experiments": {
