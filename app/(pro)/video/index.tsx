@@ -94,7 +94,12 @@ export default function VideoAnalyse() {
     let paths: string[] = [];
     try {
       for (let i = 0; i < frames.length; i++) {
-        const path = await uploadFrame(agent.id, vaId, i + 1, frames[i].uri);
+        const asset = frames[i];
+        const path = await uploadFrame(agent.id, vaId, i + 1, {
+          uri: asset.uri,
+          mimeType: asset.mimeType,
+          fileName: asset.fileName,
+        });
         paths.push(path);
         setPhase({ kind: 'uploading', total: frames.length, done: i + 1 });
       }
