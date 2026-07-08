@@ -8,6 +8,7 @@ import { FormField } from '../../src/components/FormField';
 import { CountryPicker } from '../../src/components/CountryPicker';
 import { completeAgentProfile } from '../../src/lib/agent';
 import { clearIntent } from '../../src/lib/intent';
+import { track, EVT } from '../../src/lib/analytics';
 import { theme } from '../../src/lib/theme';
 import { getLang } from '../../src/lib/lang';
 
@@ -50,6 +51,11 @@ export default function AgentSignUpStep2() {
       });
       setFoundingNumber(res.founding_number);
       setIsFounding(res.is_founding);
+      track(EVT.agentRegistered, {
+        is_founding: res.is_founding,
+        founding_number: res.founding_number ?? null,
+        ffar_country: ffarCountry,
+      });
       // clearIntent so signing out later doesn't push them back through
       // agent onboarding — role picker will reset intent if needed.
       await clearIntent();
@@ -58,6 +64,7 @@ export default function AgentSignUpStep2() {
       // and will replace() to /(pro)/chat within ~500ms of the response.
     } catch (e: any) {
       setError(humanise(e?.message ?? '', lang));
+      track(EVT.agentStep2Failed, { message: e?.message ?? '' });
     } finally {
       setSubmitting(false);
     }

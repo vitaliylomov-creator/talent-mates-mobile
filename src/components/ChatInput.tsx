@@ -14,9 +14,14 @@ interface Props {
   disabled?: boolean;
   value?: string;
   onChangeText?: (v: string) => void;
+  placeholder?: string;
+  showVoice?: boolean;
 }
 
-export function ChatInput({ onSend, disabled, value, onChangeText }: Props) {
+export function ChatInput({
+  onSend, disabled, value, onChangeText,
+  placeholder, showVoice = true,
+}: Props) {
   const lang = getLang();
   const [internal, setInternal] = useState('');
   const [recording, setRecording] = useState(false);
@@ -24,7 +29,7 @@ export function ChatInput({ onSend, disabled, value, onChangeText }: Props) {
   const setText = onChangeText ?? setInternal;
 
   const canSend = text.trim().length > 0 && !disabled;
-  const showMic = text.trim().length === 0;
+  const showMic = showVoice && text.trim().length === 0;
 
   const handleSend = () => {
     const trimmed = text.trim();
@@ -48,7 +53,7 @@ export function ChatInput({ onSend, disabled, value, onChangeText }: Props) {
           style={styles.input}
           value={text}
           onChangeText={setText}
-          placeholder={t('chatPlaceholder', lang)}
+          placeholder={placeholder ?? t('chatPlaceholder', lang)}
           placeholderTextColor={theme.colors.t3}
           multiline
           maxLength={4000}

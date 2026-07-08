@@ -41,4 +41,15 @@ export const EVT = {
   proClicked:     'pro_clicked',
   proActivated:   'pro_activated',
   signOut:        'signed_out',
+
+  // Agent flow (MATE Pro).
+  agentRegistered:    'agent_registered',
+  agentStep2Failed:   'agent_step2_failed',
+  proChatSent:        'pro_chat_message_sent',
+  proChatFailed:      'pro_chat_message_failed',
+  proSubAgentSwitch:  'pro_sub_agent_switched',
+  proSubscribeStart:  'pro_subscribe_started',
+  proSubscribeDone:   'pro_subscribe_completed',
+  proCancelStart:     'pro_cancel_initiated',
+  proClientCreated:   'pro_client_created',
 } as const;

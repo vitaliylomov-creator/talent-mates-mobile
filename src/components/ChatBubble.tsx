@@ -12,9 +12,12 @@ interface Props {
   role: 'user' | 'assistant';
   content: string;
   liveData?: boolean;
+  // Pro-side label ("LEGAL", "COACH", ...) displayed instead of LIVE DATA.
+  // When both are passed, agentLabel wins.
+  agentLabel?: string;
 }
 
-export function ChatBubble({ role, content, liveData }: Props) {
+export function ChatBubble({ role, content, liveData, agentLabel }: Props) {
   const isUser = role === 'user';
   const opacity = useSharedValue(0);
   const translateY = useSharedValue(8);
@@ -42,12 +45,17 @@ export function ChatBubble({ role, content, liveData }: Props) {
         animStyle,
       ]}
     >
-      {!isUser && liveData && (
+      {!isUser && agentLabel ? (
+        <View style={styles.liveBadge}>
+          <View style={styles.livePulse} />
+          <Text style={styles.liveText}>{agentLabel.toUpperCase()}</Text>
+        </View>
+      ) : !isUser && liveData ? (
         <View style={styles.liveBadge}>
           <View style={styles.livePulse} />
           <Text style={styles.liveText}>LIVE DATA</Text>
         </View>
-      )}
+      ) : null}
       <Pressable
         onLongPress={handleLongPress}
         delayLongPress={350}
