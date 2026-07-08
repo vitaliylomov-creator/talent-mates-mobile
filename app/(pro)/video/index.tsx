@@ -36,7 +36,9 @@ const FOCUSES: ReadonlyArray<{ value: VideoFocus; label: string }> = [
   { value: 'physical',    label: 'Physical' },
 ];
 
-const MIN_FRAMES = 3;
+// mate-pro-video-analyse enforces >=4 server-side — align the client min
+// so the alert catches the case before we spend upload bandwidth.
+const MIN_FRAMES = 4;
 const MAX_FRAMES = 12;
 
 export default function VideoAnalyse() {
