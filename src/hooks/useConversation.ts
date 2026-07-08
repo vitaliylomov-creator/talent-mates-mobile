@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import * as Crypto from 'expo-crypto';
+import { newId } from '../lib/uuid';
 import type { ChatMessage, AgentId } from '../lib/types';
 import { callMateChat } from '../lib/mate-chat';
 import { fetchSessionMessages } from '../lib/conversations';
@@ -13,7 +13,7 @@ interface State {
 }
 
 function newSession(): string {
-  return Crypto.randomUUID();
+  return newId();
 }
 
 // Per-screen conversation state. The mate-chat edge function already persists
@@ -52,7 +52,7 @@ export function useConversation(playerId: string | null) {
       ...prev,
       messages: [
         ...prev.messages,
-        { ...m, id: Crypto.randomUUID(), createdAt: new Date().toISOString() },
+        { ...m, id: newId(), createdAt: new Date().toISOString() },
       ],
     }));
   }, []);
@@ -60,7 +60,7 @@ export function useConversation(playerId: string | null) {
   const send = useCallback(async (text: string, agent: AgentId) => {
     if (!playerId) return;
     const userMsg: ChatMessage = {
-      id: Crypto.randomUUID(),
+      id: newId(),
       role: 'user',
       content: text,
       createdAt: new Date().toISOString(),
@@ -85,7 +85,7 @@ export function useConversation(playerId: string | null) {
         messages: [
           ...prev.messages,
           {
-            id: Crypto.randomUUID(),
+            id: newId(),
             role: 'assistant',
             content: res.response,
             liveData: res.had_real_time_data,

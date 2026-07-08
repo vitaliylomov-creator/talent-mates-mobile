@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import * as Crypto from 'expo-crypto';
+import { newId } from '../lib/uuid';
 import { callMateProChat, type ProSubAgent } from '../lib/agent';
 import { fetchProMessages, type ProMessage } from '../lib/conversations-pro';
 import { track, EVT } from '../lib/analytics';
@@ -55,7 +55,7 @@ export function useProConversation(options: Options = {}) {
 
   const send = useCallback(async (text: string, subAgent: ProSubAgent) => {
     const optimistic: ProMessage = {
-      id: Crypto.randomUUID(),
+      id: newId(),
       role: 'user',
       content: text,
       subAgent: null,
